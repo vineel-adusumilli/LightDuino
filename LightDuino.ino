@@ -85,6 +85,7 @@ void loop() {
         updateColors();
       }
       ctr = 0;
+      client.write(6);
     }
   }
 }
