@@ -1,4 +1,4 @@
-
+#include <SimpleTimer.h>
 #include <DmxSimple.h>
 #include <SPI.h>
 #include <Timer.h>
@@ -13,9 +13,15 @@ int DMX_dir = 4;
 byte rgb[] = { 0, 0, 0 };
 byte ctr = 0;
 
-boolean debug = true;
+boolean debug = false;
+SimpleTimer timer;
+int watchdog;
 
 void setup() {
+  // we can pull pin 7 low to trigger a reset
+  digitalWrite(7, HIGH);
+  pinMode(7, OUTPUT);
+  
   if (debug) {
     Serial.begin(115200);
     Serial.println("Initialized.");
@@ -36,10 +42,6 @@ void setup() {
   if (debug)
     Serial.print("handshaking...");
   client.write('a');
-  /*while (!client.available()); // wait for data
-  while (client.available()) {
-    Serial.print(client.read());
-  }*/
   while (client.read() != 'b');
   client.write('c');
   if (debug)
@@ -50,9 +52,13 @@ void setup() {
   DmxSimple.usePin(2);
   DmxSimple.write((int) 1, (int) 81);
   updateColors();
+  
+  watchdog = timer.setInterval(5000, reset);
 }
 
 void loop() {
+  timer.run();
+  
   while (client.available()) {
     byte b = client.read();
     if (b != 1) {
@@ -68,6 +74,7 @@ void loop() {
           Serial.print(", ");
           Serial.println(rgb[2]);
         }
+        timer.restartTimer(watchdog);
         updateColors();
       }
       ctr = 0;
@@ -80,5 +87,12 @@ void updateColors() {
   DmxSimple.write((int) 3, rgb[0]);
   DmxSimple.write((int) 4, rgb[1]);
   DmxSimple.write((int) 5, rgb[2]);
+}
+
+void reset() {
+  if (debug) {
+    Serial.println("Resetting...");
+  }
+  digitalWrite(7, LOW);
 }
 
