@@ -1,7 +1,6 @@
-#include <SimpleTimer.h>
+#include <avr/wdt.h>
 #include <DmxSimple.h>
 #include <SPI.h>
-#include <Timer.h>
 #include <WiFly.h>
 
 #include "Credentials.h"
@@ -14,13 +13,10 @@ byte rgb[] = { 0, 0, 0 };
 byte ctr = 0;
 
 boolean debug = false;
-SimpleTimer timer;
-int watchdog;
 
 void setup() {
-  // we can pull pin 7 low to trigger a reset
-  digitalWrite(7, HIGH);
-  pinMode(7, OUTPUT);
+  // disable watchdog incase enabled for some reason
+  wdt_disable();
   
   if (debug) {
     Serial.begin(115200);
@@ -53,12 +49,10 @@ void setup() {
   DmxSimple.write((int) 1, (int) 81);
   updateColors();
   
-  watchdog = timer.setInterval(5000, reset);
+  wdt_enable(WDTO_8S);
 }
 
 void loop() {
-  timer.run();
-  
   while (client.available()) {
     byte b = client.read();
     if (b != 1) {
@@ -74,7 +68,7 @@ void loop() {
           Serial.print(", ");
           Serial.println(rgb[2]);
         }
-        timer.restartTimer(watchdog);
+        wdt_reset();
         updateColors();
       }
       ctr = 0;
@@ -87,12 +81,5 @@ void updateColors() {
   DmxSimple.write((int) 3, rgb[0]);
   DmxSimple.write((int) 4, rgb[1]);
   DmxSimple.write((int) 5, rgb[2]);
-}
-
-void reset() {
-  if (debug) {
-    Serial.println("Resetting...");
-  }
-  digitalWrite(7, LOW);
 }
 
